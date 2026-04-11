@@ -101,13 +101,13 @@ export const CONFIG_FILES: ConfigFile[] = [
   {
     id: 'white-cidr-filtered',
     name: 'CIDR — Фильтрованный',
-    filename: 'WHITE-CIDR-RU-filtered.txt',
+    filename: 'WHITE-CIDR-RU-checked.txt',
     category: 'white',
     listType: 'cidr',
     isMobile: false,
     isFiltered: true,
-    rawUrl: `${BASE}/WHITE-CIDR-RU-filtered.txt`,
-    cdnUrl: `${CDN}/WHITE-CIDR-RU-filtered.txt`,
+    rawUrl: `${BASE}/WHITE-CIDR-RU-checked.txt`,
+    cdnUrl: `${CDN}/WHITE-CIDR-RU-checked.txt`,
     badge: '🎯 VK + Яндекс',
     description: 'Отфильтрованный CIDR — только проверенные российские хостеры: VK, Яндекс, CDNvideo, Билайн. Меньше объём, высокая надёжность.',
     useCases: [
