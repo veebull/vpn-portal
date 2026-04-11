@@ -20,10 +20,10 @@ export default function App() {
   }, [activeCategory]);
 
   const categories: { id: Category; label: string; emoji: string; count: number }[] = [
-    { id: 'all', label: 'Все', emoji: '✦', count: CONFIG_FILES.length },
-    { id: 'black', label: 'Чёрный', emoji: '🌍', count: CONFIG_FILES.filter(f => f.category === 'black').length },
-    { id: 'white', label: 'Белый (РФ)', emoji: '🇷🇺', count: CONFIG_FILES.filter(f => f.category === 'white').length },
-    { id: 'tor', label: 'Tor', emoji: '🧅', count: CONFIG_FILES.filter(f => f.category === 'tor').length },
+    { id: 'all',   label: 'Все',              emoji: '✦',  count: CONFIG_FILES.length },
+    { id: 'black', label: 'Прямой маршрут',   emoji: '🌍', count: CONFIG_FILES.filter(f => f.category === 'black').length },
+    { id: 'white', label: 'Выборочный',        emoji: '🗺️', count: CONFIG_FILES.filter(f => f.category === 'white').length },
+    { id: 'tor',   label: 'Tor Bridges',       emoji: '🧅', count: CONFIG_FILES.filter(f => f.category === 'tor').length },
   ];
 
   return (
@@ -60,8 +60,8 @@ export default function App() {
         </div>
 
         <div className="hero">
-          <h1 className="hero-title">Свободный интернет<br /><span className="hero-accent">без цензуры</span></h1>
-          <p className="hero-sub">Бесплатные VPN-конфиги, проверяемые каждые 1–2 часа. Работают в России.</p>
+          <h1 className="hero-title">Найдётся другой<br /><span className="hero-accent">путь</span></h1>
+          <p className="hero-sub">Проверенные конфигурации серверов. Проходят автотест каждые 1–2 часа.</p>
         </div>
 
         <nav className="category-nav">
@@ -109,7 +109,7 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <p>Данные из <a href="https://github.com/igareck/vpn-configs-for-russia" target="_blank" rel="noreferrer">igareck/vpn-configs-for-russia</a> · Обновляется через GitHub Actions · Не собирает данные</p>
+        <p>Данные из <a href="https://github.com/igareck/vpn-configs-for-russia" target="_blank" rel="noreferrer">igareck/vpn-configs-for-russia</a> · Обновляется через GitHub Actions · Не собирает данные пользователей</p>
       </footer>
     </div>
   );
