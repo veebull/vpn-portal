@@ -1,0 +1,287 @@
+import { useState } from 'react';
+import { buildDeepLink } from '../utils/parser';
+
+const SUBS = {
+  normal: {
+    label: 'Обычный список',
+    emoji: '🌍',
+    cdnUrl: 'https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/BLACK_VLESS_RUS_mobile.txt',
+    hint: 'Подходит когда всё работает штатно. Стабильное зашифрованное соединение через быстрые серверы.',
+    color: '#e05c5c',
+  },
+  whitelist: {
+    label: 'Белый список',
+    emoji: '🗺️',
+    cdnUrl: 'https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/Vless-Reality-White-Lists-Rus-Mobile.txt',
+    hint: 'Когда часть привычных сервисов перестала открываться — этот список тихо подключается только к нужным адресам, не трогая остальное.',
+    color: '#4fc3f7',
+  },
+  outline: {
+    label: 'Ключи Outline',
+    emoji: '🔑',
+    cdnUrl: 'https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/BLACK_SS+All_RUS.txt',
+    hint: 'SS-ключи для Outline и других совместимых клиентов. Скопируйте любой ключ и вставьте в приложение.',
+    color: '#f0b429',
+  },
+};
+
+type SubType = keyof typeof SUBS;
+type CheckState = 'idle' | 'checking' | 'done';
+
+const CLIENTS = [
+  { id: 'v2box',        name: 'v2Box',        icon: '📦', note: 'iOS / Android', primary: true },
+  { id: 'happ',         name: 'Happ',         icon: '🌀', note: 'iOS / Android', primary: true },
+  { id: 'streisand',    name: 'Streisand',    icon: '🛡️', note: 'iOS',           primary: true },
+  { id: 'v2ray',        name: 'v2RayNG',      icon: '⚡', note: 'Android',       primary: false },
+  { id: 'nekobox',      name: 'NekoBox',      icon: '🐱', note: 'Android',       primary: false },
+  { id: 'shadowrocket', name: 'Shadowrocket', icon: '🚀', note: 'iOS',           primary: false },
+];
+
+interface Props {
+  onDone: (done: boolean) => void;
+}
+
+export function EasyMode({ onDone }: Props) {
+  const [checkState, setCheckState]     = useState<CheckState>('idle');
+  const [activeSub, setActiveSub]       = useState<SubType>('normal');
+  const [animating, setAnimating]       = useState(false);
+  const [copied, setCopied]             = useState<Record<string, boolean>>({});
+  const [showAllClients, setShowAllClients] = useState(false);
+
+  const sub = SUBS[activeSub];
+  const showResult = checkState === 'done';
+
+  async function runCheck() {
+    setCheckState('checking');
+    const probe = (url: string, ms = 3500): Promise<boolean> =>
+      new Promise(res => {
+        const img = new Image();
+        const t = setTimeout(() => { img.src = ''; res(false); }, ms);
+        img.onload  = () => { clearTimeout(t); res(true); };
+        img.onerror = () => { clearTimeout(t); res(false); };
+        img.src = url + '?_=' + Date.now();
+      });
+    const googleOk = await probe('https://www.google.com/favicon.ico').catch(() => false);
+    const type: SubType = googleOk ? 'normal' : 'whitelist';
+    setActiveSub(type);
+    setCheckState('done');
+    onDone(true);
+  }
+
+  function switchTo(type: SubType) {
+    setAnimating(true);
+    setTimeout(() => {
+      setActiveSub(type);
+      setAnimating(false);
+    }, 240);
+  }
+
+  function selectManual(type: SubType) {
+    setActiveSub(type);
+    setCheckState('done');
+    onDone(true);
+  }
+
+  function reset() {
+    setCheckState('idle');
+    setActiveSub('normal');
+    setShowAllClients(false);
+    onDone(false);
+  }
+
+  function copyUrl(url: string, key: string) {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(p => ({ ...p, [key]: true }));
+      setTimeout(() => setCopied(p => ({ ...p, [key]: false })), 1800);
+    });
+  }
+
+  const primaryClients   = CLIENTS.filter(c => c.primary);
+  const secondaryClients = CLIENTS.filter(c => !c.primary);
+
+  /* ── IDLE screen ─────────────────────────────────────── */
+  if (!showResult) {
+    return (
+      <div className="easy-idle">
+        <button
+          className={`easy-check-btn ${checkState === 'checking' ? 'loading' : ''}`}
+          onClick={runCheck}
+          disabled={checkState === 'checking'}
+        >
+          {checkState === 'checking'
+            ? <><span className="easy-spinner" />Проверяем соединение…</>
+            : <>🔍 Определить автоматически</>}
+        </button>
+
+        <p className="easy-hint-text">Нажмите — подберём нужный вариант за пару секунд</p>
+
+        {/* Manual pick — BELOW the button */}
+        <div className="easy-manual-wrap">
+          <span className="easy-manual-label">Выбрать вручную</span>
+          <div className="easy-manual-row">
+            <button className="easy-manual-pill pill-normal" onClick={() => selectManual('normal')}>
+              🌍 Обычный список
+            </button>
+            <button className="easy-manual-pill pill-white" onClick={() => selectManual('whitelist')}>
+              🗺️ Белый список
+            </button>
+            <button className="easy-manual-pill pill-outline" onClick={() => selectManual('outline')}>
+              🔑 Outline
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── RESULT screen ───────────────────────────────────── */
+  return (
+    <div className={`easy-result ${animating ? 'fade-out' : 'fade-in'}`}>
+
+      {/* Result card */}
+      <div className="easy-result-card" style={{ '--rc': sub.color } as React.CSSProperties}>
+        <div className="easy-result-head">
+          <span className="easy-result-emoji">{sub.emoji}</span>
+          <div>
+            <div className="easy-result-tag">Рекомендуем</div>
+            <div className="easy-result-name">{sub.label}</div>
+          </div>
+          <button className="easy-recheck" onClick={reset} title="Начать заново">↺</button>
+        </div>
+
+        <p className="easy-result-hint">{sub.hint}</p>
+
+        {activeSub === 'outline' ? (
+          <OutlineKeys />
+        ) : (
+          <>
+            <div className="easy-url-block">
+              <div className="easy-url-label">Ссылка на подписку</div>
+              <div className="easy-url-row">
+                <code className="easy-url">{sub.cdnUrl}</code>
+                <button
+                  className={`easy-copy-btn ${copied['url'] ? 'ok' : ''}`}
+                  onClick={() => copyUrl(sub.cdnUrl, 'url')}
+                >{copied['url'] ? '✓ Скопировано' : '⎘ Копировать'}</button>
+              </div>
+            </div>
+
+            <div className="easy-clients-label">Открыть в приложении</div>
+            <div className="easy-clients">
+              {primaryClients.map(c => (
+                <a key={c.id} className="easy-client" href={buildDeepLink(sub.cdnUrl, c.id)}>
+                  <span className="easy-client-icon">{c.icon}</span>
+                  <span className="easy-client-name">{c.name}</span>
+                  <span className="easy-client-note">{c.note}</span>
+                </a>
+              ))}
+            </div>
+
+            {!showAllClients ? (
+              <button className="easy-more-clients" onClick={() => setShowAllClients(true)}>
+                Другие приложения ↓
+              </button>
+            ) : (
+              <div className="easy-clients easy-clients--secondary">
+                {secondaryClients.map(c => (
+                  <a key={c.id} className="easy-client" href={buildDeepLink(sub.cdnUrl, c.id)}>
+                    <span className="easy-client-icon">{c.icon}</span>
+                    <span className="easy-client-name">{c.name}</span>
+                    <span className="easy-client-note">{c.note}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* "Still not working" — clear, friendly */}
+      <div className="easy-fallback-block">
+        <div className="easy-fallback-title">Всё ещё не работает?</div>
+        <p className="easy-fallback-desc">Попробуйте другой список — иногда один вариант работает лучше другого в зависимости от сети.</p>
+        <div className="easy-fallback-pills">
+          {(['normal', 'whitelist', 'outline'] as SubType[]).map(type => (
+            <button
+              key={type}
+              className={`easy-type-pill ${activeSub === type ? 'pill-current' : ''}`}
+              style={activeSub === type ? { borderColor: SUBS[type].color, color: SUBS[type].color, background: `${SUBS[type].color}18` } : {}}
+              onClick={() => type !== activeSub && switchTo(type)}
+              disabled={activeSub === type}
+            >
+              {SUBS[type].emoji} {SUBS[type].label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="easy-amnezia-note">
+        🔒 Ключи AmneziaWG в этом репозитории не публикуются — для Amnezia используйте встроенный поиск серверов внутри приложения.
+      </p>
+    </div>
+  );
+}
+
+/* ── Outline SS key viewer ───────────────────────────── */
+const SS_URL = 'https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/BLACK_SS+All_RUS.txt';
+
+function OutlineKeys() {
+  const [keys, setKeys]     = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded]   = useState(false);
+  const [copied, setCopied]   = useState<Record<number, boolean>>({});
+  const [search, setSearch]   = useState('');
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res  = await fetch(SS_URL + '?t=' + Date.now());
+      const text = await res.text();
+      const ssKeys = text.split('\n').map(l => l.trim()).filter(l => l.startsWith('ss://'));
+      setKeys(ssKeys);
+      setLoaded(true);
+    } catch { setKeys([]); }
+    setLoading(false);
+  }
+
+  function copyKey(key: string, idx: number) {
+    navigator.clipboard.writeText(key).then(() => {
+      setCopied(p => ({ ...p, [idx]: true }));
+      setTimeout(() => setCopied(p => ({ ...p, [idx]: false })), 1600);
+    });
+  }
+
+  const filtered = keys.filter(k => !search || k.toLowerCase().includes(search.toLowerCase())).slice(0, 50);
+
+  if (!loaded) {
+    return (
+      <div className="outline-load-wrap">
+        <p className="outline-desc">
+          SS-ключи совместимы с <strong>Outline</strong>, Shadowsocks и другими клиентами с поддержкой протокола SS.
+        </p>
+        <button className="outline-load-btn" onClick={load} disabled={loading}>
+          {loading ? <><span className="easy-spinner" />Загружаем ключи…</> : '🔑 Показать SS-ключи'}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="outline-keys-wrap">
+      <div className="outline-toolbar">
+        <input className="outline-search" placeholder="Поиск…" value={search} onChange={e => setSearch(e.target.value)} />
+        <span className="outline-count">{filtered.length} / {keys.length}</span>
+      </div>
+      <div className="outline-list">
+        {filtered.map((k, i) => (
+          <div key={i} className="outline-key-row">
+            <code className="outline-key-text">{k.slice(0, 72)}{k.length > 72 ? '…' : ''}</code>
+            <button className={`outline-copy ${copied[i] ? 'ok' : ''}`} onClick={() => copyKey(k, i)}>
+              {copied[i] ? '✓' : '⎘'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
