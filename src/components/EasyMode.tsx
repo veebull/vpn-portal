@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { buildDeepLink } from '../utils/parser';
+
+// ── Telegram WebApp typing ────────────────────────────
+declare global {
+  interface Window {
+    Telegram?: { WebApp?: { openLink: (url: string) => void } };
+  }
+}
+
+const isInTelegram = () => !!(window.Telegram?.WebApp?.openLink);
 
 const SUBS = {
   normal: {
@@ -28,25 +36,72 @@ const SUBS = {
 type SubType = keyof typeof SUBS;
 type CheckState = 'idle' | 'checking' | 'done';
 
+// Build redirect URL for Telegram: /#/open/:clientId/:subType
+function getRedirectUrl(clientId: string, subType: SubType): string {
+  const base = window.location.href.split('#')[0];
+  return `${base}#/open/${clientId}/${subType}`;
+}
+
+// Build actual deeplink for regular browser
+function buildDeepLink(cdnUrl: string, clientId: string): string {
+  const encoded = encodeURIComponent(cdnUrl);
+  const b64 = btoa(cdnUrl);
+  switch (clientId) {
+    case 'v2box':        return `v2box://install-sub?url=${encoded}`;
+    case 'v2ray':        return `v2rayng://install-config?url=${encoded}`;
+    case 'happ':         return `happ://add/${encoded}`;
+    case 'streisand':    return `streisand://import/${b64}`;
+    case 'nekobox':      return `clash://install-config?url=${encoded}`;
+    case 'shadowrocket': return `sub://${b64}`;
+    default:             return cdnUrl;
+  }
+}
+
 const CLIENTS = [
-  { id: 'v2box',        name: 'v2Box',        icon: '📦', note: 'iOS / Android', primary: true },
-  { id: 'happ',         name: 'Happ',         icon: '🌀', note: 'iOS / Android', primary: true },
-  { id: 'streisand',    name: 'Streisand',    icon: '🛡️', note: 'iOS',           primary: true },
-  { id: 'v2ray',        name: 'v2RayNG',      icon: '⚡', note: 'Android',       primary: false },
-  { id: 'nekobox',      name: 'NekoBox',      icon: '🐱', note: 'Android',       primary: false },
-  { id: 'shadowrocket', name: 'Shadowrocket', icon: '🚀', note: 'iOS',           primary: false },
+  { id: 'v2box',        name: 'v2Box',        icon: '📦', note: 'iOS / Android' },
+  { id: 'happ',         name: 'Happ',         icon: '🌀', note: 'iOS / Android' },
+  { id: 'streisand',    name: 'Streisand',    icon: '🛡️', note: 'iOS'           },
+  { id: 'v2ray',        name: 'v2RayNG',      icon: '⚡', note: 'Android'       },
+  { id: 'nekobox',      name: 'NekoBox',      icon: '🐱', note: 'Android'       },
+  { id: 'shadowrocket', name: 'Shadowrocket', icon: '🚀', note: 'iOS'           },
 ];
 
 interface Props {
   onDone: (done: boolean) => void;
 }
 
+// Client button: in Telegram opens redirect page via openLink, otherwise direct deeplink
+function ClientBtn({ clientId, subType }: { clientId: string; subType: SubType }) {
+  const client = CLIENTS.find(c => c.id === clientId)!;
+  const sub = SUBS[subType];
+
+  function handleClick(e: React.MouseEvent) {
+    if (isInTelegram()) {
+      e.preventDefault();
+      const redirectUrl = getRedirectUrl(clientId, subType);
+      window.Telegram!.WebApp!.openLink(redirectUrl);
+    }
+    // else: normal <a href> follows naturally
+  }
+
+  return (
+    <a
+      className="easy-client"
+      href={buildDeepLink(sub.cdnUrl, clientId)}
+      onClick={handleClick}
+    >
+      <span className="easy-client-icon">{client.icon}</span>
+      <span className="easy-client-name">{client.name}</span>
+      <span className="easy-client-note">{client.note}</span>
+    </a>
+  );
+}
+
 export function EasyMode({ onDone }: Props) {
-  const [checkState, setCheckState]     = useState<CheckState>('idle');
-  const [activeSub, setActiveSub]       = useState<SubType>('normal');
-  const [animating, setAnimating]       = useState(false);
-  const [copied, setCopied]             = useState<Record<string, boolean>>({});
-  const [showAllClients, setShowAllClients] = useState(false);
+  const [checkState, setCheckState] = useState<CheckState>('idle');
+  const [activeSub, setActiveSub]   = useState<SubType>('normal');
+  const [animating, setAnimating]   = useState(false);
+  const [copied, setCopied]         = useState<Record<string, boolean>>({});
 
   const sub = SUBS[activeSub];
   const showResult = checkState === 'done';
@@ -61,19 +116,16 @@ export function EasyMode({ onDone }: Props) {
         img.onerror = () => { clearTimeout(t); res(false); };
         img.src = url + '?_=' + Date.now();
       });
-    const googleOk = await probe('https://www.google.com/favicon.ico').catch(() => false);
-    const type: SubType = googleOk ? 'normal' : 'whitelist';
-    setActiveSub(type);
+    const ok = await probe('https://www.google.com/favicon.ico').catch(() => false);
+    setActiveSub(ok ? 'normal' : 'whitelist');
     setCheckState('done');
     onDone(true);
   }
 
   function switchTo(type: SubType) {
+    if (type === activeSub) return;
     setAnimating(true);
-    setTimeout(() => {
-      setActiveSub(type);
-      setAnimating(false);
-    }, 240);
+    setTimeout(() => { setActiveSub(type); setAnimating(false); }, 240);
   }
 
   function selectManual(type: SubType) {
@@ -85,7 +137,6 @@ export function EasyMode({ onDone }: Props) {
   function reset() {
     setCheckState('idle');
     setActiveSub('normal');
-    setShowAllClients(false);
     onDone(false);
   }
 
@@ -96,10 +147,7 @@ export function EasyMode({ onDone }: Props) {
     });
   }
 
-  const primaryClients   = CLIENTS.filter(c => c.primary);
-  const secondaryClients = CLIENTS.filter(c => !c.primary);
-
-  /* ── IDLE screen ─────────────────────────────────────── */
+  /* ── IDLE ──────────────────────────────────────────── */
   if (!showResult) {
     return (
       <div className="easy-idle">
@@ -112,34 +160,26 @@ export function EasyMode({ onDone }: Props) {
             ? <><span className="easy-spinner" />Проверяем соединение…</>
             : <>🔍 Определить автоматически</>}
         </button>
-
         <p className="easy-hint-text">Нажмите — подберём нужный вариант за пару секунд</p>
 
-        {/* Manual pick — BELOW the button */}
         <div className="easy-manual-wrap">
           <span className="easy-manual-label">Выбрать вручную</span>
           <div className="easy-manual-row">
-            <button className="easy-manual-pill pill-normal" onClick={() => selectManual('normal')}>
-              🌍 Обычный список
-            </button>
-            <button className="easy-manual-pill pill-white" onClick={() => selectManual('whitelist')}>
-              🗺️ Белый список
-            </button>
-            <button className="easy-manual-pill pill-outline" onClick={() => selectManual('outline')}>
-              🔑 Outline
-            </button>
+            <button className="easy-manual-pill pill-normal"  onClick={() => selectManual('normal')}>🌍 Обычный список</button>
+            <button className="easy-manual-pill pill-white"   onClick={() => selectManual('whitelist')}>🗺️ Белый список</button>
+            <button className="easy-manual-pill pill-outline" onClick={() => selectManual('outline')}>🔑 Outline</button>
           </div>
         </div>
       </div>
     );
   }
 
-  /* ── RESULT screen ───────────────────────────────────── */
+  /* ── RESULT ────────────────────────────────────────── */
   return (
     <div className={`easy-result ${animating ? 'fade-out' : 'fade-in'}`}>
 
-      {/* Result card */}
       <div className="easy-result-card" style={{ '--rc': sub.color } as React.CSSProperties}>
+        {/* Header */}
         <div className="easy-result-head">
           <span className="easy-result-emoji">{sub.emoji}</span>
           <div>
@@ -151,10 +191,12 @@ export function EasyMode({ onDone }: Props) {
 
         <p className="easy-result-hint">{sub.hint}</p>
 
+        {/* Outline mode */}
         {activeSub === 'outline' ? (
           <OutlineKeys />
         ) : (
           <>
+            {/* Sub URL */}
             <div className="easy-url-block">
               <div className="easy-url-label">Ссылка на подписку</div>
               <div className="easy-url-row">
@@ -166,47 +208,30 @@ export function EasyMode({ onDone }: Props) {
               </div>
             </div>
 
+            {/* All 6 clients in one unified grid — no toggle */}
             <div className="easy-clients-label">Открыть в приложении</div>
             <div className="easy-clients">
-              {primaryClients.map(c => (
-                <a key={c.id} className="easy-client" href={buildDeepLink(sub.cdnUrl, c.id)}>
-                  <span className="easy-client-icon">{c.icon}</span>
-                  <span className="easy-client-name">{c.name}</span>
-                  <span className="easy-client-note">{c.note}</span>
-                </a>
+              {CLIENTS.map(c => (
+                <ClientBtn key={c.id} clientId={c.id} subType={activeSub} />
               ))}
             </div>
-
-            {!showAllClients ? (
-              <button className="easy-more-clients" onClick={() => setShowAllClients(true)}>
-                Другие приложения ↓
-              </button>
-            ) : (
-              <div className="easy-clients easy-clients--secondary">
-                {secondaryClients.map(c => (
-                  <a key={c.id} className="easy-client" href={buildDeepLink(sub.cdnUrl, c.id)}>
-                    <span className="easy-client-icon">{c.icon}</span>
-                    <span className="easy-client-name">{c.name}</span>
-                    <span className="easy-client-note">{c.note}</span>
-                  </a>
-                ))}
-              </div>
-            )}
           </>
         )}
       </div>
 
-      {/* "Still not working" — clear, friendly */}
+      {/* "Still not working" */}
       <div className="easy-fallback-block">
         <div className="easy-fallback-title">Всё ещё не работает?</div>
-        <p className="easy-fallback-desc">Попробуйте другой список — иногда один вариант работает лучше другого в зависимости от сети.</p>
+        <p className="easy-fallback-desc">Попробуйте другой список — иногда один вариант работает лучше в зависимости от вашей сети.</p>
         <div className="easy-fallback-pills">
           {(['normal', 'whitelist', 'outline'] as SubType[]).map(type => (
             <button
               key={type}
               className={`easy-type-pill ${activeSub === type ? 'pill-current' : ''}`}
-              style={activeSub === type ? { borderColor: SUBS[type].color, color: SUBS[type].color, background: `${SUBS[type].color}18` } : {}}
-              onClick={() => type !== activeSub && switchTo(type)}
+              style={activeSub === type
+                ? { borderColor: SUBS[type].color, color: SUBS[type].color, background: `${SUBS[type].color}18` }
+                : {}}
+              onClick={() => switchTo(type)}
               disabled={activeSub === type}
             >
               {SUBS[type].emoji} {SUBS[type].label}
@@ -226,7 +251,7 @@ export function EasyMode({ onDone }: Props) {
 const SS_URL = 'https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/BLACK_SS+All_RUS.txt';
 
 function OutlineKeys() {
-  const [keys, setKeys]     = useState<string[]>([]);
+  const [keys, setKeys]       = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded]   = useState(false);
   const [copied, setCopied]   = useState<Record<number, boolean>>({});
@@ -251,7 +276,9 @@ function OutlineKeys() {
     });
   }
 
-  const filtered = keys.filter(k => !search || k.toLowerCase().includes(search.toLowerCase())).slice(0, 50);
+  const filtered = keys.filter(k =>
+    !search || k.toLowerCase().includes(search.toLowerCase())
+  ).slice(0, 50);
 
   if (!loaded) {
     return (
