@@ -51,15 +51,44 @@ button { cursor:pointer; font-family:var(--font); }
 .easy-page { flex:1; display:flex; flex-direction:column; }
 .easy-page--done .main--easy { padding-top:24px; justify-content:flex-start; }
 
+/* Hero: centered vertically together with content in idle state */
+.hero-center {
+  text-align:center;
+  padding:28px 24px 6px;
+  position:relative; z-index:5;
+  /* On desktop idle — hero is part of centered flex column */
+}
+
+/* When idle: wrap hero + content in a single centered column */
+.easy-page:not(.easy-page--done) {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+.easy-page:not(.easy-page--done) .main--easy {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center; /* center vertically on desktop */
+  padding:16px var(--pad) 80px;
+  width:100%;
+  position:relative; z-index:5;
+}
+/* hero moves inside the flex flow — stick it above .easy-wrap */
+.easy-page:not(.easy-page--done) .hero-center {
+  padding:0 24px 20px;
+}
+
 /* ── Main ────────────────────────────────────────────── */
 .main { position:relative; z-index:5; max-width:1100px; margin:0 auto; padding:28px 24px 80px; flex:1; width:100%; }
 
-/* Easy main: centered, with desktop side padding */
+/* Easy main base styles (for done state) */
 .main--easy {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  flex:1; position:relative; z-index:5;
-  padding:20px var(--pad) 80px;
+  display:flex; flex-direction:column; align-items:center;
+  padding:24px var(--pad) 80px;
   width:100%;
+  position:relative; z-index:5;
 }
 
 /* ── Expert ──────────────────────────────────────────── */
@@ -270,7 +299,7 @@ button { cursor:pointer; font-family:var(--font); }
 
   /* Easy idle: button pinned to bottom of viewport */
   .easy-page:not(.easy-page--done) .main--easy {
-    /* justify-content: flex-start; */
+    justify-content: flex-start;
     padding-top: 20px;
     /* push button to bottom */
     min-height: calc(100svh - 90px);
@@ -297,4 +326,33 @@ button { cursor:pointer; font-family:var(--font); }
   .expert-header-inner { padding:16px 16px 10px; }
   .category-nav { padding:0 16px 14px; }
   .main { padding:20px 16px 60px; }
+}
+
+/* ── Mobile overrides (patch) ────────────────────────── */
+@media (max-width: 600px) {
+  .hero-title-sm { font-size: 22px; }
+
+  /* idle: hero+content fill screen; button+manual at bottom */
+  .easy-page:not(.easy-page--done) .main--easy {
+    justify-content: space-between !important;
+    padding-top: 0;
+    min-height: calc(100svh - 90px);
+  }
+  .easy-page:not(.easy-page--done) .hero-center {
+    padding: 24px 16px 0;
+    align-self: flex-start;
+    width: 100%;
+  }
+  .easy-idle {
+    justify-content: flex-end;
+    gap: 14px;
+    min-height: auto;
+    padding-bottom: 8px;
+  }
+  .easy-idle .easy-check-btn {
+    order: 10; width: 100%; justify-content: center;
+    font-size: 15px; padding: 14px 24px;
+  }
+  .easy-idle .easy-hint-text { order: 11; }
+  .easy-idle .easy-manual-wrap { order: 12; width: 100%; }
 }

@@ -41,7 +41,7 @@ export default function App() {
           {/* Logo */}
           <div className="logo">
             <span className="logo-mark">⬡</span>
-            <span className="logo-text">Bestyne<span className="logo-accent">t</span></span>
+            <span className="logo-text">Bestynet<span className="logo-accent">Portal</span></span>
           </div>
 
           {/* Mode switch — center */}
@@ -84,13 +84,14 @@ export default function App() {
       {/* ── Easy mode ────────────────────────────────────── */}
       {mode === 'easy' && (
         <div className={`easy-page ${easyDone ? 'easy-page--done' : ''}`}>
-          {!easyDone && (
-            <div className="hero-center">
-              <h1 className="hero-title-sm">Найдётся другой <span className="hero-accent">путь</span></h1>
-              <p className="hero-sub-sm">Проверенные конфигурации. Автотест каждые 1–2 часа.</p>
-            </div>
-          )}
           <main className="main main--easy">
+            {/* Hero: only shown when idle, sits above the content in same flex column */}
+            {!easyDone && (
+              <div className="hero-center">
+                <h1 className="hero-title-sm">Найдётся другой <span className="hero-accent">путь</span></h1>
+                <p className="hero-sub-sm">Проверенные конфигурации. Автотест каждые 1–2 часа.</p>
+              </div>
+            )}
             <EasyMode onDone={setEasyDone} />
           </main>
         </div>

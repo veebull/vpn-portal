@@ -3,7 +3,13 @@ import { useState } from 'react';
 // ── Telegram WebApp typing ────────────────────────────
 declare global {
   interface Window {
-    Telegram?: { WebApp?: { openLink: (url: string) => void } };
+    Telegram?: {
+      WebApp?: {
+        openLink: (url: string, options?: { try_instant_view?: boolean }) => void;
+        openTelegramLink: (url: string) => void;
+        platform?: string;
+      };
+    };
   }
 }
 
@@ -36,12 +42,6 @@ const SUBS = {
 type SubType = keyof typeof SUBS;
 type CheckState = 'idle' | 'checking' | 'done';
 
-// Build redirect URL for Telegram: /#/open/:clientId/:subType
-function getRedirectUrl(clientId: string, subType: SubType): string {
-  const base = window.location.href.split('#')[0];
-  return `${base}#/open/${clientId}/${subType}`;
-}
-
 // Build actual deeplink for regular browser
 function buildDeepLink(cdnUrl: string, clientId: string): string {
   const encoded = encodeURIComponent(cdnUrl);
@@ -70,24 +70,27 @@ interface Props {
   onDone: (done: boolean) => void;
 }
 
-// Client button: in Telegram opens redirect page via openLink, otherwise direct deeplink
+// Client button: in Telegram uses openLink with deeplink directly.
+// Telegram WebApp.openLink can open custom URL schemes on mobile.
 function ClientBtn({ clientId, subType }: { clientId: string; subType: SubType }) {
   const client = CLIENTS.find(c => c.id === clientId)!;
   const sub = SUBS[subType];
+  const deeplink = buildDeepLink(sub.cdnUrl, clientId);
 
   function handleClick(e: React.MouseEvent) {
     if (isInTelegram()) {
       e.preventDefault();
-      const redirectUrl = getRedirectUrl(clientId, subType);
-      window.Telegram!.WebApp!.openLink(redirectUrl);
+      // openLink with try_instant_view:false opens custom schemes (v2box://, etc.)
+      // on iOS/Android Telegram this triggers the app directly
+      window.Telegram!.WebApp!.openLink(deeplink, { try_instant_view: false });
     }
-    // else: normal <a href> follows naturally
+    // regular browser: <a href> follows naturally
   }
 
   return (
     <a
       className="easy-client"
-      href={buildDeepLink(sub.cdnUrl, clientId)}
+      href={deeplink}
       onClick={handleClick}
     >
       <span className="easy-client-icon">{client.icon}</span>
