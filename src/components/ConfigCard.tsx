@@ -31,6 +31,17 @@ export function ConfigCard({ file, isSelected, onClick }: Props) {
       <div className="card-body">
         <h3 className="card-name">{file.name}</h3>
         <p className="card-desc">{file.description}</p>
+
+        {/* Use cases — only when expanded */}
+        {isSelected && file.useCases && file.useCases.length > 0 && (
+          <ul className="card-usecases">
+            {file.useCases.map((uc, i) => (
+              <li key={i} className="card-usecase-item">
+                <span className="card-usecase-dot">·</span>{uc}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="card-footer">
@@ -39,7 +50,7 @@ export function ConfigCard({ file, isSelected, onClick }: Props) {
             <span key={p} className="proto-chip">{p}</span>
           ))}
         </div>
-        <span className="card-arrow">{isSelected ? '↑' : '↓'}</span>
+        <span className="card-arrow">{isSelected ? '↑ свернуть' : '↓ подробнее'}</span>
       </div>
     </button>
   );

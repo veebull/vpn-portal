@@ -70,21 +70,32 @@ interface Props {
   onDone: (done: boolean) => void;
 }
 
-// Client button: in Telegram uses openLink with deeplink directly.
-// Telegram WebApp.openLink can open custom URL schemes on mobile.
+// Client button: handles Telegram Mini App deeplink restrictions
+// Desktop Telegram: openLink works fine with custom schemes
+// Mobile Telegram: openLink with custom schemes is unreliable — use window.open with user-gesture instead
 function ClientBtn({ clientId, subType }: { clientId: string; subType: SubType }) {
   const client = CLIENTS.find(c => c.id === clientId)!;
   const sub = SUBS[subType];
   const deeplink = buildDeepLink(sub.cdnUrl, clientId);
 
   function handleClick(e: React.MouseEvent) {
-    if (isInTelegram()) {
-      e.preventDefault();
-      // openLink with try_instant_view:false opens custom schemes (v2box://, etc.)
-      // on iOS/Android Telegram this triggers the app directly
-      window.Telegram!.WebApp!.openLink(deeplink, { try_instant_view: false });
+    if (!isInTelegram()) return; // regular browser: follow <a href> normally
+
+    e.preventDefault();
+    const tg = window.Telegram!.WebApp!;
+
+    // Detect mobile Telegram (iOS/Android)
+    const platform = tg.platform || '';
+    const isMobileTg = /ios|android/i.test(platform);
+
+    if (isMobileTg) {
+      // On mobile TG, openLink doesn't reliably open custom schemes.
+      // window.open in a user-gesture context IS allowed and triggers the app.
+      window.open(deeplink, '_blank');
+    } else {
+      // Desktop Telegram supports openLink with custom schemes
+      tg.openLink(deeplink, { try_instant_view: false });
     }
-    // regular browser: <a href> follows naturally
   }
 
   return (
@@ -92,6 +103,8 @@ function ClientBtn({ clientId, subType }: { clientId: string; subType: SubType }
       className="easy-client"
       href={deeplink}
       onClick={handleClick}
+      // rel needed so window.open isn't blocked as popup
+      rel="noopener"
     >
       <span className="easy-client-icon">{client.icon}</span>
       <span className="easy-client-name">{client.name}</span>
