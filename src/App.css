@@ -270,7 +270,7 @@ button { cursor:pointer; font-family:var(--font); }
 
   /* Easy idle: button pinned to bottom of viewport */
   .easy-page:not(.easy-page--done) .main--easy {
-    justify-content: flex-start;
+    /* justify-content: flex-start; */
     padding-top: 20px;
     /* push button to bottom */
     min-height: calc(100svh - 90px);
