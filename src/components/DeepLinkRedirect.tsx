@@ -1,35 +1,32 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { buildDeepLink } from '../utils/parser';
 
-// Sub URLs per type
-const SUB_URLS: Record<string, string> = {
-  normal:    'https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/BLACK_VLESS_RUS_mobile.txt',
-  whitelist: 'https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/Vless-Reality-White-Lists-Rus-Mobile.txt',
-  outline:   'https://cdn.jsdelivr.net/gh/igareck/vpn-configs-for-russia@main/BLACK_SS+All_RUS.txt',
-};
-
+// Route: /#/open/:encodedDeeplink
+// encodedDeeplink is encodeURIComponent(deeplink), e.g. "v2box%3A%2F%2F..."
+// This page opens in external browser (via Telegram openLink) and redirects to the deeplink.
+// External browser CAN open custom URL schemes — Mini App webview cannot.
 
 export function DeepLinkRedirect() {
-  const { clientId, subType } = useParams<{ clientId: string; subType: string }>();
+  const { encodedDeeplink } = useParams<{ encodedDeeplink: string }>();
+  const deeplink = decodeURIComponent(encodedDeeplink || '');
 
   useEffect(() => {
-    const subUrl = SUB_URLS[subType || 'normal'] || SUB_URLS.normal;
-    const deepLink = buildDeepLink(subUrl, clientId || 'v2box');
+    if (!deeplink) return;
+    // Tiny delay so the page visually renders before redirect
+    const t = setTimeout(() => {
+      window.location.href = deeplink;
+    }, 150);
+    return () => clearTimeout(t);
+  }, [deeplink]);
 
-    // Small delay so page renders first (avoids blank flash)
-    const timer = setTimeout(() => {
-      // If running inside Telegram Mini App — use Telegram's native openLink
-      if (window.Telegram?.WebApp?.openLink) {
-        window.Telegram.WebApp.openLink(deepLink);
-      } else {
-        // Regular browser — just navigate
-        window.location.href = deepLink;
-      }
-    }, 80);
-
-    return () => clearTimeout(timer);
-  }, [clientId, subType]);
+  // Detect protocol for display
+  const appName = deeplink.startsWith('v2box') ? 'v2Box'
+    : deeplink.startsWith('v2rayng') ? 'v2RayNG'
+    : deeplink.startsWith('happ') ? 'Happ'
+    : deeplink.startsWith('streisand') ? 'Streisand'
+    : deeplink.startsWith('clash') ? 'NekoBox'
+    : deeplink.startsWith('sub://') ? 'Shadowrocket'
+    : 'приложение';
 
   return (
     <div style={{
@@ -41,23 +38,32 @@ export function DeepLinkRedirect() {
       background: '#060912',
       color: '#c8d8f0',
       fontFamily: "'Outfit', sans-serif",
-      gap: 16,
-      padding: 24,
+      gap: 14,
+      padding: 28,
       textAlign: 'center',
     }}>
-      <div style={{ fontSize: 40 }}>🔗</div>
-      <div style={{ fontSize: 16, fontWeight: 600, color: '#e8f0ff' }}>Открываем приложение…</div>
-      <div style={{ fontSize: 13, color: '#5a7090', maxWidth: 320 }}>
-        Если ничего не произошло — скопируйте ссылку на подписку и вставьте вручную.
+      <div style={{ fontSize: 44 }}>🔗</div>
+      <div style={{ fontSize: 17, fontWeight: 600, color: '#e8f0ff' }}>
+        Открываем {appName}…
+      </div>
+      <div style={{ fontSize: 13, color: '#5a7090', maxWidth: 300, lineHeight: 1.6 }}>
+        Если приложение не открылось — убедитесь, что оно установлено, или скопируйте ссылку на подписку вручную.
       </div>
       <div style={{
-        width: 32, height: 32,
-        border: '3px solid rgba(74,158,255,0.2)',
+        width: 28, height: 28, marginTop: 6,
+        border: '2.5px solid rgba(74,158,255,0.2)',
         borderTopColor: '#4a9eff',
         borderRadius: '50%',
         animation: 'spin 0.8s linear infinite',
-        marginTop: 8,
       }} />
+      {deeplink && (
+        <a
+          href={deeplink}
+          style={{ marginTop: 8, fontSize: 12, color: '#4a9eff', textDecoration: 'underline' }}
+        >
+          Открыть вручную
+        </a>
+      )}
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );

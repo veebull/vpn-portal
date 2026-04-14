@@ -126,13 +126,12 @@ export function buildDeepLink(raw: string, client: string): string {
   const encoded = encodeURIComponent(raw);
   const b64 = btoa(raw);
   switch (client) {
-    case 'v2box':   return `v2box://install-sub?url=${encoded}`;
-    case 'v2ray':   return `v2rayng://install-config?url=${encoded}`;
-    case 'happ':    return `happ://add/${encoded}`;
-    case 'streisand': return `streisand://import/${b64}`;
-    case 'nekobox': return `clash://install-config?url=${encoded}`;
+    case 'v2box':        return `v2box://install-sub?url=${encoded}`;
+    case 'v2ray':        return `v2rayng://install-config?url=${encoded}`;
+    case 'happ':         return `happ://add/${encoded}`;
+    case 'streisand':    return `streisand://import/${b64}`;
+    case 'nekobox':      return `clash://install-config?url=${encoded}`;
     case 'shadowrocket': return `sub://${b64}`;
-    case 'quantumult': return `quantumult-x:///add-resource?remote-resource=${encoded}`;
     default: return raw;
   }
 }

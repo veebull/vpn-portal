@@ -9,7 +9,8 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
       <Routes>
-        <Route path="/open/:clientId/:subType" element={<DeepLinkRedirect />} />
+        {/* Deep link redirect: /#/open/<encodedDeeplink> */}
+        <Route path="/open/:encodedDeeplink" element={<DeepLinkRedirect />} />
         <Route path="*" element={<App />} />
       </Routes>
     </HashRouter>

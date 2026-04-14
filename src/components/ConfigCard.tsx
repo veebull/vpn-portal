@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import type { ConfigFile } from '../types';
 import { CATEGORY_META } from '../data/configs';
 
 interface Props {
   file: ConfigFile;
   isSelected: boolean;
-  onClick: () => void;
+  onClick: () => void;        // opens ConfigDetail (configs lightbox)
 }
 
 const PROTOCOL_ICONS: Record<string, string> = {
@@ -12,14 +13,26 @@ const PROTOCOL_ICONS: Record<string, string> = {
 };
 
 export function ConfigCard({ file, isSelected, onClick }: Props) {
+  const [expanded, setExpanded] = useState(false);
   const meta = CATEGORY_META[file.category as keyof typeof CATEGORY_META];
   const icon = PROTOCOL_ICONS[file.listType] || '◈';
   const color = meta?.color || '#4fc3f7';
 
+  // Toggle expand without bubbling to detail open
+  function handleExpandClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setExpanded(v => !v);
+  }
+
+  // Open detail panel
+  function handleDetailClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    onClick();
+  }
+
   return (
-    <button
-      className={`config-card ${isSelected ? 'selected' : ''} cat-${file.category}`}
-      onClick={onClick}
+    <div
+      className={`config-card ${isSelected ? 'selected' : ''} ${expanded ? 'expanded' : ''} cat-${file.category}`}
       style={{ '--card-color': color } as React.CSSProperties}
     >
       <div className="card-top">
@@ -30,10 +43,10 @@ export function ConfigCard({ file, isSelected, onClick }: Props) {
 
       <div className="card-body">
         <h3 className="card-name">{file.name}</h3>
-        <p className="card-desc">{file.description}</p>
+        <p className={`card-desc ${expanded ? 'card-desc--full' : ''}`}>{file.description}</p>
 
-        {/* Use cases — only when expanded */}
-        {isSelected && file.useCases && file.useCases.length > 0 && (
+        {/* Use cases — shown when expanded */}
+        {expanded && file.useCases && file.useCases.length > 0 && (
           <ul className="card-usecases">
             {file.useCases.map((uc, i) => (
               <li key={i} className="card-usecase-item">
@@ -50,8 +63,19 @@ export function ConfigCard({ file, isSelected, onClick }: Props) {
             <span key={p} className="proto-chip">{p}</span>
           ))}
         </div>
-        <span className="card-arrow">{isSelected ? '↑ свернуть' : '↓ подробнее'}</span>
+        <div className="card-actions">
+          <button className="card-expand-btn" onClick={handleExpandClick}>
+            {expanded ? '↑' : '↓ подробнее'}
+          </button>
+          <button
+            className={`card-detail-btn ${isSelected ? 'active' : ''}`}
+            onClick={handleDetailClick}
+            title="Смотреть конфиги"
+          >
+            {isSelected ? '✕ закрыть' : 'конфиги →'}
+          </button>
+        </div>
       </div>
-    </button>
+    </div>
   );
 }
