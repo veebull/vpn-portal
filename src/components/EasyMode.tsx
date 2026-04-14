@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // ── Telegram WebApp typing ────────────────────────────
 declare global {
   interface Window {
     Telegram?: {
       WebApp?: {
+        initDataUnsafe: {};
         openLink: (
           url: string,
           options?: { try_instant_view?: boolean },
@@ -15,7 +16,15 @@ declare global {
   }
 }
 
-const isInTelegram = () => !!window.Telegram?.WebApp?.openLink;
+// const isInTelegram = () => !!window.Telegram?.WebApp?.openLink;
+function isTelegramWebApp(): boolean {
+  const tg = window.Telegram?.WebApp;
+  return !!(
+    tg &&
+    tg.initDataUnsafe &&
+    Object.keys(tg.initDataUnsafe).length > 0
+  );
+}
 
 // Subscription URLs — fragment (#name) becomes display name in VPN clients
 const SUBS = {
@@ -90,6 +99,7 @@ const CLIENTS = [
 
 interface Props {
   onDone: (done: boolean) => void;
+  resetSignal: number;
 }
 
 // Build redirect page URL — opened via Telegram openLink in an external browser
@@ -112,7 +122,7 @@ function ClientBtn({
   const deeplink = buildDeepLink(sub.cdnUrl, clientId);
 
   function handleClick(e: React.MouseEvent) {
-    if (!isInTelegram()) return; // regular browser: follow <a href> naturally
+    if (!isTelegramWebApp()) return; // regular browser: follow <a href> naturally
 
     e.preventDefault();
     // Open our redirect page in external browser via openLink.
@@ -138,7 +148,7 @@ function ClientBtn({
   );
 }
 
-export function EasyMode({ onDone }: Props) {
+export function EasyMode({ onDone, resetSignal }: Props) {
   const [checkState, setCheckState] = useState<CheckState>('idle');
   const [activeSub, setActiveSub] = useState<SubType>('normal');
   const [animating, setAnimating] = useState(false);
@@ -146,6 +156,12 @@ export function EasyMode({ onDone }: Props) {
 
   const sub = SUBS[activeSub];
   const showResult = checkState === 'done';
+
+  useEffect(() => {
+    setCheckState('idle');
+    setActiveSub('normal');
+    onDone(false);
+  }, [resetSignal]);
 
   async function runCheck() {
     setCheckState('checking');
