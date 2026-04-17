@@ -6,6 +6,7 @@ import { ConfigCard } from './components/ConfigCard';
 import { ConfigDetail } from './components/ConfigDetail';
 import { CategoryBadge } from './components/CategoryBadge';
 import { EasyMode } from './components/EasyMode';
+import { PrivacyNotice } from './components/PrivacyPolicy';
 import './App.css';
 
 type Mode = 'easy' | 'expert';
@@ -207,7 +208,7 @@ export default function App() {
           </main>
         </>
       )}
-
+      <PrivacyNotice />
       <footer className='footer'>
         <p>
           Данные:{' '}

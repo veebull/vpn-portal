@@ -1599,3 +1599,71 @@ button {
   white-space: nowrap;
   font-family: var(--font);
 }
+
+.privacy-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  opacity: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 12px;
+  background: rgba(12, 18, 36, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(100, 160, 255, 0.2);
+  border-radius: 40px;
+  max-width: calc(100vw - 32px);
+  width: max-content;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  transition: opacity .35s ease, transform .35s ease;
+  pointer-events: none;
+}
+.privacy-bar--in {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+.privacy-bar-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.privacy-bar-text {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+@media (max-width: 520px) {
+  .privacy-bar-text { white-space: normal; }
+  .privacy-bar { border-radius: 14px; bottom: 16px; }
+}
+.privacy-bar-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 12px;
+}
+.privacy-bar-link:hover { color: #5babff; }
+.privacy-bar-close {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-dim);
+  font-size: 10px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  margin-left: 2px;
+}
+.privacy-bar-close:hover {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-bright);
+}
